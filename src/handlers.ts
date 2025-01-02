@@ -190,7 +190,7 @@ export const commands: Array<Command> = [
             .filter(({ farmer }) => farmer !== "BANK")
             .map(async (entry) => {
               const user = await interaction.client.users.fetch(entry.farmer);
-              return `${balances.indexOf(entry.amount) + 1}\. ${user.username}: ${entry.amount}`;
+              return `${balances.indexOf(entry.amount) + 1}\\. ${user.username}: ${entry.amount}`;
             }),
         )
       ).join("\n");
