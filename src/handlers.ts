@@ -216,12 +216,10 @@ export const commands: Array<Command> = [
     handler: async (interaction) => {
       const topBalances = getTopBalances();
       const balances = topBalances
-        .filter(({ farmer }) => !["BANK", "JAIL"].includes(farmer))
         .map(({ amount }) => amount);
       const leaderboard = (
         await Promise.all(
           topBalances
-            .filter(({ farmer }) => !["BANK", "JAIL"].includes(farmer))
             .map(async (entry) => {
               const user = await interaction.client.users.fetch(entry.farmer);
               return `${balances.indexOf(entry.amount) + 1}\\. ${

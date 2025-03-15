@@ -54,6 +54,7 @@ export const TOP_BALANCES = db.prepare<{ farmer: string; amount: number }, []>(`
   SELECT farmer, amount
   FROM balance
   WHERE commodity = 1
+  AND farmer NOT IN ('BANK', 'JAIL')
   ORDER BY amount DESC LIMIT 10
 `);
 
