@@ -7,7 +7,8 @@ const css = (s: TemplateStringsArray, ...v: unknown[]) =>
 
 const style = css`
   body {
-    background-color: fuchsia;
+    background-color: #121212;
+    color: #f0f0f0;
   }
 `;
 
