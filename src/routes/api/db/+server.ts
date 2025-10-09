@@ -1,7 +1,6 @@
 import { DATABASE_PATH } from '$lib/server/env';
 import type { RequestHandler } from '@sveltejs/kit';
-import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { createReadStream, existsSync, statSync } from 'node:fs';
 
 export const GET: RequestHandler = async () => {
     // Check if DATABASE_PATH is configured
@@ -17,15 +16,19 @@ export const GET: RequestHandler = async () => {
     }
 
     try {
-        // Read the database file
-        const dbBuffer = await readFile(DATABASE_PATH);
+        // Get database file stats for Content-Length
+        const stat = statSync(DATABASE_PATH);
+        const fileStream = createReadStream(DATABASE_PATH);
 
-        // Return the database file with appropriate headers
-        return new Response(dbBuffer, {
+        // Make stream web-compatible
+        const stream = fileStream as unknown as ReadableStream;
+
+        // Return the database file as a stream with appropriate headers
+        return new Response(stream, {
             headers: {
                 'Content-Type': 'application/octet-stream',
                 'Content-Disposition': 'attachment; filename="stock-corn.db"',
-                'Content-Length': dbBuffer.length.toString(),
+                'Content-Length': stat.size.toString(),
                 'Cache-Control': 'no-cache, no-store, must-revalidate',
                 'Pragma': 'no-cache',
                 'Expires': '0'
