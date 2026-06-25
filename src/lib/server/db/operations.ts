@@ -115,10 +115,8 @@ export const trade = (
   if (amount <= 0) {
     return { error: "INVALID_AMOUNT" };
   }
-  const sourceBalance = GET_BALANCE.get({
-    farmer: sourceFarmer,
-    commodity,
-  })!.amount;
+  const sourceBalance =
+    GET_BALANCE.get({ farmer: sourceFarmer, commodity })?.amount ?? 0;
   if (sourceBalance < amount && sourceFarmer !== "BANK") {
     return { error: "INSUFFICIENT_FUNDS" };
   }
