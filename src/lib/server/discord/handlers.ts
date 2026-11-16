@@ -18,6 +18,7 @@ import {
 import { userToFarmer } from "./utilities";
 import { CORN_CZAR_ID } from "../env";
 import { casinoCommands } from "./casino";
+import { marketCommands } from "./market";
 
 type Handler = (interaction: ChatInputCommandInteraction) => Promise<void>;
 export type Command = {
@@ -282,5 +283,6 @@ export const commands: Array<Command> = [
       });
     },
   },
+  ...marketCommands,
   ...casinoCommands,
 ];
