@@ -29,6 +29,8 @@
                 return "🧨";
             case Commodities.Maria:
                 return "👑";
+            case Commodities.Chips:
+                return "🎰";
             default:
                 return "❓";
         }

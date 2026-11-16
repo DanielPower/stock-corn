@@ -3,6 +3,7 @@ export const Commodities = {
   CropCoins: 2,
   Tnt: 3,
   Maria: 4,
+  Chips: 5,
 } as const;
 
 export type CommodityName = keyof typeof Commodities;
