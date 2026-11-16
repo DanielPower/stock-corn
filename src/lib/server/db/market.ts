@@ -47,12 +47,12 @@ const SET_ARTICLE = db.prepare<
   []
 >(`UPDATE market_price SET event = $headline, article = $article WHERE id = $id`);
 
-const GET_RECENT_HEADLINES = db.prepare<
+const GET_NEWS_HISTORY = db.prepare<
   [{ commodity: Commodity; limit: number; exclude: number }],
-  { event: string }
+  { date: string; headline: string; article: string; shock: number | null }
 >(`
-  SELECT event FROM market_price
-  WHERE commodity = $commodity AND event IS NOT NULL AND id != $exclude
+  SELECT date, event AS headline, article, shock FROM market_price
+  WHERE commodity = $commodity AND article IS NOT NULL AND id != $exclude
   ORDER BY id DESC
   LIMIT $limit
 `);
@@ -160,13 +160,15 @@ export const tickMarkets = db.transaction((): NewsEvent[] => {
 export const setArticle = (id: number, headline: string, article: string) =>
   SET_ARTICLE.run({ id, headline, article });
 
-/** Latest news headlines, excluding the event with id `exclude`. */
-export const getRecentHeadlines = (
+/**
+ * Past LLM-written news articles, oldest first, excluding the event with id
+ * `exclude`. Used as the running storyline for new articles.
+ */
+export const getNewsHistory = (
   commodity: Commodity = Commodities.Corn,
-  limit = 15,
+  limit = 40,
   exclude = -1,
-) =>
-  GET_RECENT_HEADLINES.all({ commodity, limit, exclude }).map((r) => r.event);
+) => GET_NEWS_HISTORY.all({ commodity, limit, exclude }).reverse();
 
 /** Usernames of farmers who traded on the market in the last few days. */
 export const getRecentTraders = (days = 3) =>

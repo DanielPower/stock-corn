@@ -2,7 +2,7 @@ import { EmbedBuilder } from "discord.js";
 import { buildNewsPrompt } from "../../market/newsPrompt";
 import { formatChange, formatPrice } from "../../market/price";
 import {
-  getRecentHeadlines,
+  getNewsHistory,
   getRecentTraders,
   setArticle,
   type NewsEvent,
@@ -54,8 +54,7 @@ export const writeArticle = async (
     shock: event.shock,
     priceBefore: event.priceBefore,
     priceAfter: event.priceAfter,
-    // Skip this event's own placeholder headline.
-    recentHeadlines: getRecentHeadlines(event.commodity, 15, event.id),
+    history: getNewsHistory(event.commodity, 40, event.id),
     recentTraders: getRecentTraders().map(cleanName).filter(Boolean),
   });
 
