@@ -163,10 +163,20 @@ export const casinoCommands: Array<Command> = [
       const gif = new AttachmentBuilder(Buffer.from(renderSpinGif(outcome)), {
         name: "slots.gif",
       });
+      // The embed has its final layout from the start, with placeholder
+      // values, so revealing the result doesn't make it reflow.
+      const fields = (line: string, payout: string, chips: string) => [
+        { name: "Line", value: line, inline: true },
+        { name: "Payout", value: payout, inline: true },
+        { name: "Chips", value: chips, inline: true },
+      ];
       const embed = new EmbedBuilder()
         .setTitle("🎰 Spinning...")
         .setDescription(`<@${interaction.user.id}> bet ${bet} chips`)
-        .setImage("attachment://slots.gif");
+        .setColor(0x6e1e8c)
+        .setFields(fields("❔ ❔ ❔", "…", "…"))
+        .setImage("attachment://slots.gif")
+        .setFooter({ text: payTable().replaceAll("\n", " · ") });
       await interaction.reply({ embeds: [embed], files: [gif] });
 
       // Let the reels stop before revealing the result.
@@ -179,12 +189,7 @@ export const casinoCommands: Array<Command> = [
           payout > 0 ? `🎰 ${outcome.combo}! You win ${payout} chips` : "🎰 No luck",
         )
         .setColor(payout > 0 ? 0xffc428 : 0x6e1e8c)
-        .setFields([
-          { name: "Line", value: line, inline: true },
-          { name: "Payout", value: `${payout}`, inline: true },
-          { name: "Chips", value: `${chips}`, inline: true },
-        ])
-        .setFooter({ text: payTable().replaceAll("\n", " · ") });
+        .setFields(fields(line, `${payout}`, `${chips}`));
       await interaction.editReply({ embeds: [embed] });
     },
   },
