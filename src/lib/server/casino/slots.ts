@@ -26,7 +26,7 @@ export const REEL_WEIGHTS: Record<SlotSymbol, number> = {
 export const THREE_OF_A_KIND: Record<SlotSymbol, number> = {
   cherry: 10,
   lemon: 8,
-  corn: 15,
+  corn: 20,
   bell: 25,
   diamond: 75,
   seven: 200,
