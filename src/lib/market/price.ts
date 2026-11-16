@@ -21,7 +21,10 @@ export type MarketState = {
 };
 
 export type TickResult = MarketState & {
+  /** Fallback headline for a news event this tick, if one happened. */
   event: string | null;
+  /** Log-price shock from the news event (0 when there was none). */
+  shock: number;
 };
 
 export const MARKET_PARAMS = {
@@ -122,6 +125,7 @@ export const tick = (
     price: clampPrice(Math.exp(nextLog)),
     trend,
     event: event?.headline ?? null,
+    shock: event?.shock ?? 0,
   };
 };
 

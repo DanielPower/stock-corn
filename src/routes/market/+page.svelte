@@ -7,7 +7,12 @@
     type PageData = {
         market: { price: number; trend: number } | null;
         history: PricePoint[];
-        events: { price: number; date: string; event: string }[];
+        events: {
+            price: number;
+            date: string;
+            event: string;
+            article: string | null;
+        }[];
     };
 
     let { data }: { data: PageData } = $props();
@@ -114,13 +119,22 @@
         {#if data.events.length}
             <div class="bg-stone-800 rounded-lg border border-stone-700 p-4">
                 <h2 class="text-lg font-semibold mb-3">📰 Market news</h2>
-                <ul class="space-y-2">
+                <ul class="space-y-4">
                     {#each data.events as e}
-                        <li class="flex justify-between gap-4 text-sm">
-                            <span>{e.event}</span>
-                            <span class="text-stone-400 whitespace-nowrap">
-                                {formatPrice(e.price)} · {when(e.date)}
-                            </span>
+                        <li class="text-sm">
+                            <div class="flex justify-between gap-4">
+                                <span class="font-semibold">{e.event}</span>
+                                <span class="text-stone-400 whitespace-nowrap">
+                                    {formatPrice(e.price)} · {when(e.date)}
+                                </span>
+                            </div>
+                            {#if e.article}
+                                <p
+                                    class="mt-1 text-stone-300 whitespace-pre-line"
+                                >
+                                    {e.article}
+                                </p>
+                            {/if}
                         </li>
                     {/each}
                 </ul>

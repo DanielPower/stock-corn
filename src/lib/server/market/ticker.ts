@@ -1,4 +1,5 @@
 import { pruneHistory, tickMarkets } from "../db/market";
+import { publishNews } from "./news";
 
 const MINUTE = 60_000;
 const DAY = 24 * 60 * MINUTE;
@@ -15,7 +16,7 @@ export const startMarketTicker = () => {
 
   const runTick = () => {
     try {
-      tickMarkets();
+      publishNews(tickMarkets());
     } catch (e) {
       console.error("Market tick failed", e);
     }
