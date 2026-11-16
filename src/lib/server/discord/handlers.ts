@@ -4,6 +4,7 @@ import {
   EmbedBuilder,
   SlashCommandBuilder,
   type SlashCommandOptionsOnlyBuilder,
+  type SlashCommandSubcommandsOnlyBuilder,
 } from "discord.js";
 import { Commodities, getCommodityName } from "../../commodities";
 import {
@@ -16,10 +17,14 @@ import {
 } from "../db/operations";
 import { userToFarmer } from "./utilities";
 import { CORN_CZAR_ID } from "../env";
+import { casinoCommands } from "./casino";
 
 type Handler = (interaction: ChatInputCommandInteraction) => Promise<void>;
-type Command = {
-  data: SlashCommandBuilder | SlashCommandOptionsOnlyBuilder;
+export type Command = {
+  data:
+    | SlashCommandBuilder
+    | SlashCommandOptionsOnlyBuilder
+    | SlashCommandSubcommandsOnlyBuilder;
   handler: Handler;
 };
 
@@ -277,4 +282,5 @@ export const commands: Array<Command> = [
       });
     },
   },
+  ...casinoCommands,
 ];
