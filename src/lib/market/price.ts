@@ -1,12 +1,15 @@
 // Corn price simulation.
 //
-// The log price follows a mean-reverting random walk (an Ornstein–Uhlenbeck
-// process, i.e. geometric Brownian motion pulled back towards a long-run
-// price) with three extra ingredients that make it feel like a market:
+// Tuned for a casual game, not realism: the price swings hard (often +/-50% in
+// a day) and wanders freely. The log price is a random walk (geometric
+// Brownian motion) with a soft wall that only pulls back hard when the price
+// gets ~10x away from basePrice, so it never runs off to zero or infinity but
+// doesn't feel pinned either. On top of that:
 //
-//  - a slowly wandering trend, so prices have bull and bear runs instead of
-//    pure noise,
-//  - rare jump events ("news"), which shock the price up or down,
+//  - a wandering trend, so prices have bull and bear runs instead of pure
+//    noise,
+//  - a few jump events ("news") a day, which shock the price 8-30% (sometimes
+//    double that) up or down,
 //  - price impact from trades, so buying pushes the price up and selling
 //    pushes it down.
 //
@@ -18,25 +21,33 @@ export type MarketState = {
 };
 
 export type TickResult = MarketState & {
+  /** Fallback headline for a news event this tick, if one happened. */
   event: string | null;
+  /** Log-price shock from the news event (0 when there was none). */
+  shock: number;
 };
 
 export const MARKET_PARAMS = {
-  /** Long-run price the market reverts to, in CropCoins per cob. */
+  /** Price the market wanders around, in CropCoins per cob. */
   basePrice: 10,
-  /** Mean-reversion speed per minute. Half-life of about one day. */
-  reversion: Math.LN2 / 1440,
-  /** Volatility of the log price per minute (~10% per day). */
-  volatility: 0.1 / Math.sqrt(1440),
+  /**
+   * Strength of the pull back towards basePrice. The pull grows with the cube
+   * of the distance (in log space), so near the base price there is almost no
+   * pull and the price wanders freely; only far-off prices (around 10x away)
+   * get dragged back.
+   */
+  reversion: 2e-4,
+  /** Volatility of the log price per minute (~25%/day before trends and news). */
+  volatility: 0.25 / Math.sqrt(1440),
   /** Trend mean-reversion per minute. Trends last a few hours. */
-  trendReversion: 1 / 240,
-  /** Volatility of the trend per minute. */
-  trendVolatility: 0.00001,
-  /** Chance of a news event per minute (~1 per day). */
-  eventChance: 1 / 1440,
-  /** Price never leaves this range. */
-  minPrice: 0.5,
-  maxPrice: 500,
+  trendReversion: 1 / 180,
+  /** Volatility of the trend per minute. Gives big bull and bear runs. */
+  trendVolatility: 0.00004,
+  /** Chance of a news event per minute (~3 per day). */
+  eventChance: 1 / 480,
+  /** Hard backstop; the soft pull should keep prices well inside this. */
+  minPrice: 0.1,
+  maxPrice: 1000,
   /** Log-price impact per unit traded. 100 cobs moves the price ~3%. */
   impact: 0.0003,
   /** Fee taken on each side of a trade. */
@@ -80,8 +91,8 @@ const pick = <T>(items: T[], random: () => number): T =>
 const rollEvent = (random: () => number): NewsEvent | null => {
   if (random() >= MARKET_PARAMS.eventChance) return null;
   const bullish = random() < 0.5;
-  // Shock between 3% and 12% in log space.
-  const size = 0.03 + random() * 0.09;
+  // Shock between 8% and 30% in log space, occasionally doubled.
+  const size = (0.08 + random() * 0.22) * (random() < 0.15 ? 2 : 1);
   return bullish
     ? { headline: pick(BULLISH_NEWS, random), shock: size }
     : { headline: pick(BEARISH_NEWS, random), shock: -size };
@@ -102,9 +113,10 @@ export const tick = (
 
   const event = rollEvent(random);
 
+  const distance = logPrice - logBase;
   const nextLog =
-    logPrice +
-    p.reversion * (logBase - logPrice) +
+    logPrice -
+    p.reversion * distance ** 3 +
     trend +
     p.volatility * gaussian(random) +
     (event?.shock ?? 0);
@@ -113,6 +125,7 @@ export const tick = (
     price: clampPrice(Math.exp(nextLog)),
     trend,
     event: event?.headline ?? null,
+    shock: event?.shock ?? 0,
   };
 };
 

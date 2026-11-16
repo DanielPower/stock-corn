@@ -150,6 +150,9 @@ export const marketCommands: Command[] = [
         sub.setName("price").setDescription("Check the current price of corn"),
       )
       .addSubcommand((sub) =>
+        sub.setName("news").setDescription("Read the latest corn market news"),
+      )
+      .addSubcommand((sub) =>
         sub
           .setName("buy")
           .setDescription("Buy corn with CropCoins")
@@ -203,6 +206,21 @@ export const marketCommands: Command[] = [
         case "sell":
           await order(interaction, "sell");
           return;
+        case "news": {
+          const latest = getRecentEvents(Commodities.Corn, 1)[0];
+          if (!latest) {
+            await interaction.reply("No news yet. The market is quiet.");
+            return;
+          }
+          const embed = new EmbedBuilder()
+            .setAuthor({ name: "📰 Corn Exchange News" })
+            .setTitle(latest.event)
+            .setColor(GOLD)
+            .setTimestamp(new Date(latest.date + "Z"));
+          if (latest.article) embed.setDescription(latest.article);
+          await interaction.reply({ embeds: [embed] });
+          return;
+        }
         case "quote": {
           const market = getMarket();
           if (!market) {

@@ -27,11 +27,42 @@ const SET_MARKET = db.prepare<
 `);
 
 const INSERT_PRICE = db.prepare<
-  [{ commodity: Commodity; price: number; event: string | null }],
-  []
+  [
+    {
+      commodity: Commodity;
+      price: number;
+      event: string | null;
+      shock: number | null;
+    },
+  ],
+  { id: number }
 >(`
-  INSERT INTO market_price (commodity, price, event)
-  VALUES ($commodity, $price, $event)
+  INSERT INTO market_price (commodity, price, event, shock)
+  VALUES ($commodity, $price, $event, $shock)
+  RETURNING id
+`);
+
+const SET_ARTICLE = db.prepare<
+  [{ id: number; headline: string; article: string }],
+  []
+>(`UPDATE market_price SET event = $headline, article = $article WHERE id = $id`);
+
+const GET_NEWS_HISTORY = db.prepare<
+  [{ commodity: Commodity; limit: number; exclude: number }],
+  { date: string; headline: string; article: string; shock: number | null }
+>(`
+  SELECT date, event AS headline, article, shock FROM market_price
+  WHERE commodity = $commodity AND article IS NOT NULL AND id != $exclude
+  ORDER BY id DESC
+  LIMIT $limit
+`);
+
+const GET_RECENT_TRADERS = db.prepare<[{ since: string }], { username: string }>(`
+  SELECT DISTINCT f.username FROM trade t
+  JOIN farmer f ON f.id = t.source_farmer
+  WHERE t.destination_farmer = 'MARKET' AND t.date >= $since
+  AND f.username IS NOT NULL
+  LIMIT 20
 `);
 
 const GET_PRICE_HISTORY = db.prepare<
@@ -45,9 +76,9 @@ const GET_PRICE_HISTORY = db.prepare<
 
 const GET_RECENT_EVENTS = db.prepare<
   [{ commodity: Commodity; limit: number }],
-  { price: number; date: string; event: string }
+  { price: number; date: string; event: string; article: string | null }
 >(`
-  SELECT price, date, event FROM market_price
+  SELECT price, date, event, article FROM market_price
   WHERE commodity = $commodity AND event IS NOT NULL
   ORDER BY id DESC
   LIMIT $limit
@@ -84,8 +115,21 @@ export const getRecentEvents = (
   limit = 5,
 ) => GET_RECENT_EVENTS.all({ commodity, limit });
 
-/** Advance every market by one minute and record the new prices. */
-export const tickMarkets = db.transaction(() => {
+export type NewsEvent = {
+  id: number;
+  commodity: Commodity;
+  headline: string;
+  shock: number;
+  priceBefore: number;
+  priceAfter: number;
+};
+
+/**
+ * Advance every market by one minute and record the new prices. Returns the
+ * news events that happened this tick so articles can be written for them.
+ */
+export const tickMarkets = db.transaction((): NewsEvent[] => {
+  const events: NewsEvent[] = [];
   for (const market of GET_MARKETS.all()) {
     const next = tick(market);
     SET_MARKET.run({
@@ -93,13 +137,44 @@ export const tickMarkets = db.transaction(() => {
       price: next.price,
       trend: next.trend,
     });
-    INSERT_PRICE.run({
+    const { id } = INSERT_PRICE.get({
       commodity: market.commodity,
       price: next.price,
       event: next.event,
-    });
+      shock: next.event ? next.shock : null,
+    })!;
+    if (next.event) {
+      events.push({
+        id,
+        commodity: market.commodity,
+        headline: next.event,
+        shock: next.shock,
+        priceBefore: market.price,
+        priceAfter: next.price,
+      });
+    }
   }
+  return events;
 });
+
+export const setArticle = (id: number, headline: string, article: string) =>
+  SET_ARTICLE.run({ id, headline, article });
+
+/**
+ * Past LLM-written news articles, oldest first, excluding the event with id
+ * `exclude`. Used as the running storyline for new articles.
+ */
+export const getNewsHistory = (
+  commodity: Commodity = Commodities.Corn,
+  limit = 40,
+  exclude = -1,
+) => GET_NEWS_HISTORY.all({ commodity, limit, exclude }).reverse();
+
+/** Usernames of farmers who traded on the market in the last few days. */
+export const getRecentTraders = (days = 3) =>
+  GET_RECENT_TRADERS.all({
+    since: toSqlDate(new Date(Date.now() - days * 24 * 60 * 60_000)),
+  }).map((r) => r.username);
 
 /** Drop minute-by-minute history older than `days`. News events are kept. */
 export const pruneHistory = (days = 30) =>
